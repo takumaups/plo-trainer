@@ -3,47 +3,64 @@ interface PokerTableProps {
   activePositions?: number[]
 }
 
-export default function PokerTable({ playerCount, activePositions = [] }: PokerTableProps) {
-  const positions = ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'MP', 'MP+1', 'CO', 'HJ']
-  const displayPositions = positions.slice(0, playerCount)
+// 人数別ポジション定義（BTNから始まり時計回りにSB→BB→UTG→...→CO）
+const POSITIONS_BY_COUNT: Record<number, string[]> = {
+  2: ['BTN', 'BB'],
+  3: ['BTN', 'SB', 'BB'],
+  4: ['BTN', 'SB', 'BB', 'UTG'],
+  5: ['BTN', 'SB', 'BB', 'UTG', 'CO'],
+  6: ['BTN', 'SB', 'BB', 'UTG', 'HJ', 'CO'],
+  7: ['BTN', 'SB', 'BB', 'UTG', 'LJ', 'HJ', 'CO'],
+  8: ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'LJ', 'HJ', 'CO'],
+  9: ['BTN', 'SB', 'BB', 'UTG', 'UTG+1', 'LJ', 'MP', 'HJ', 'CO'],
+}
 
-  // プレイヤーの座席位置を楕円上に配置
+export default function PokerTable({ playerCount, activePositions = [] }: PokerTableProps) {
+  const positions = POSITIONS_BY_COUNT[playerCount] ?? POSITIONS_BY_COUNT[6]
+
+  // BTNを下（6時）に固定し、時計回りにSB→BB→UTG→...→CO
   const getPosition = (index: number, total: number) => {
-    const angle = (index / total) * 2 * Math.PI - Math.PI / 2
-    const rx = 140
-    const ry = 80
-    const x = 200 + rx * Math.cos(angle)
-    const y = 120 + ry * Math.sin(angle)
+    // BTN(index=0)を下（π/2）に置き、時計回り
+    const angle = Math.PI / 2 + (index / total) * 2 * Math.PI
+    const rx = 155
+    const ry = 90
+    const cx = 200
+    const cy = 115
+    const x = cx + rx * Math.cos(angle)
+    const y = cy + ry * Math.sin(angle)
     return { x, y }
   }
 
   return (
     <svg viewBox="0 0 400 240" className="w-full max-w-md mx-auto">
       <defs>
-        <radialGradient id="feltGradient">
-          <stop offset="0%" stopColor="#1e4d1e" />
-          <stop offset="100%" stopColor="#0f2a0f" />
+        <radialGradient id="feltGradient" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#1e5c1e" />
+          <stop offset="100%" stopColor="#0c2a0c" />
         </radialGradient>
       </defs>
 
-      {/* テーブル */}
+      {/* テーブル外枠（木の縁） */}
+      <ellipse cx="200" cy="115" rx="185" ry="108" fill="#5c3d1e" />
+
+      {/* テーブルフェルト */}
       <ellipse
         cx="200"
-        cy="120"
-        rx="180"
-        ry="100"
+        cy="115"
+        rx="170"
+        ry="95"
         fill="url(#feltGradient)"
         stroke="var(--gold)"
-        strokeWidth="2.5"
+        strokeWidth="2"
       />
 
       {/* 中央のPLOテキスト */}
       <text
         x="200"
-        y="130"
+        y="122"
         textAnchor="middle"
-        fill="var(--gold-dim)"
-        fontSize="32"
+        fill="rgba(201,168,76,0.35)"
+        fontSize="28"
         fontFamily="Cinzel"
         fontWeight="bold"
       >
@@ -51,28 +68,32 @@ export default function PokerTable({ playerCount, activePositions = [] }: PokerT
       </text>
 
       {/* プレイヤーシート */}
-      {displayPositions.map((pos, idx) => {
+      {positions.map((pos, idx) => {
         const { x, y } = getPosition(idx, playerCount)
         const isActive = activePositions.includes(idx)
+        const isBtn = pos === 'BTN'
+        // ポジション名が長い場合（UTG+1など）はフォント小さく
+        const fontSize = pos.length > 3 ? '8' : '9'
 
         return (
           <g key={idx}>
+            {/* BTNはディーラーボタン風に */}
             <circle
               cx={x}
               cy={y}
-              r="20"
-              fill={isActive ? 'var(--gold)' : '#111'}
-              stroke="var(--gold)"
-              strokeWidth="2"
+              r="19"
+              fill={isActive ? 'var(--gold)' : isBtn ? '#2a2a2a' : '#1a1a1a'}
+              stroke={isBtn ? 'var(--gold-light)' : 'var(--gold)'}
+              strokeWidth={isBtn ? '2.5' : '1.5'}
             />
             <text
               x={x}
-              y={y + 5}
+              y={y + 4}
               textAnchor="middle"
-              fill={isActive ? '#111' : 'var(--gold)'}
-              fontSize="10"
+              fill={isActive ? '#111' : isBtn ? 'var(--gold-light)' : 'var(--gold)'}
+              fontSize={fontSize}
               fontFamily="Cinzel"
-              fontWeight="600"
+              fontWeight="700"
             >
               {pos}
             </text>
